@@ -32,6 +32,14 @@ public class MappingProfile : Profile
             .AfterMap(ConvertDateTimesUtcToCentral);
     }
 
+    // DST handling: TimeZoneInfo.ConvertTimeToUtc/ConvertTimeFromUtc automatically
+    // account for Daylight Saving Time. The "Central Standard Time" zone ID covers
+    // both CST (UTC-6) and CDT (UTC-5). By forcing DateTimeKind.Unspecified before
+    // converting, we let TimeZoneInfo determine the correct offset based on the date.
+    // During the spring-forward gap (e.g. 2:00-3:00 AM), .NET throws an
+    // InvalidTimeZoneException for truly ambiguous times. During the fall-back overlap,
+    // it defaults to the standard time offset.
+
     private static void ConvertDateTimesCentralToUtc(object source, object destination)
     {
         foreach (var prop in destination.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
