@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="AutoMapperTest.Core/AutoMapperTest.Core.csproj" />
+  <Project Path="AutoMapperTest.Tests/AutoMapperTest.Tests.csproj" />
+</Solution>
