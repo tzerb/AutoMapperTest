@@ -276,12 +276,7 @@ public class MappingTests
         var dto = _mapper.Map<AppointmentDto>(appointment);
         var roundTrippedAppointment = _mapper.Map<Appointment>(dto);
 
-        Assert.Equal(appointment.Id, roundTrippedAppointment.Id);
-        Assert.Equal(appointment.PersonId, roundTrippedAppointment.PersonId);
-        Assert.Equal(appointment.Description, roundTrippedAppointment.Description);
-        Assert.Equal(appointment.AppointmentTime, roundTrippedAppointment.AppointmentTime);
-        Assert.Equal(appointment.CreatedDate, roundTrippedAppointment.CreatedDate);
-        Assert.Equal(appointment.ReminderDate, roundTrippedAppointment.ReminderDate);
+        roundTrippedAppointment.ShouldBeEquivalentExcludingConvertedDates(appointment);
     }
 
     // ── DST edge case tests ─────────────────────────────────────────────

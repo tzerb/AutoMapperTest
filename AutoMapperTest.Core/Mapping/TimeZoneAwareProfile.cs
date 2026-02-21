@@ -1,5 +1,6 @@
 using System.Reflection;
 using AutoMapper;
+using FluentAssertions;
 
 namespace AutoMapperTest.Core.Mapping;
 
@@ -27,12 +28,18 @@ public abstract class TimeZoneAwareProfile : Profile
         TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
 
     /// <summary>
-    /// DateTime property names that should pass through without conversion.
+    /// Default set of DateTime property names that pass through without conversion.
     /// </summary>
-    protected virtual HashSet<string> PassthroughProperties { get; } = new(StringComparer.OrdinalIgnoreCase)
+    public static readonly HashSet<string> DefaultPassthroughProperties = new(StringComparer.OrdinalIgnoreCase)
     {
         "AppointmentTime"
     };
+
+    /// <summary>
+    /// DateTime property names that should pass through without conversion.
+    /// Override in a derived profile to customize.
+    /// </summary>
+    protected virtual HashSet<string> PassthroughProperties => DefaultPassthroughProperties;
 
     /// <summary>
     /// Shadows Profile.CreateMap to automatically apply Central/UTC DateTime
@@ -64,13 +71,15 @@ public abstract class TimeZoneAwareProfile : Profile
 
         foreach (var prop in destType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
-            if (prop.PropertyType != typeof(DateTime) || !prop.CanRead || !prop.CanWrite)
+            if (!IsDateTimeProperty(prop) || !prop.CanRead || !prop.CanWrite)
                 continue;
 
             if (PassthroughProperties.Contains(prop.Name))
                 continue;
 
-            var value = (DateTime)prop.GetValue(destination)!;
+            var rawValue = prop.GetValue(destination);
+            if (rawValue is not DateTime value)
+                continue;
 
             var converted = isDataToDomain
                 ? TimeZoneInfo.ConvertTimeToUtc(
@@ -82,6 +91,30 @@ public abstract class TimeZoneAwareProfile : Profile
         }
     }
 
+    internal static bool IsDateTimeProperty(PropertyInfo prop) =>
+        prop.PropertyType == typeof(DateTime) || prop.PropertyType == typeof(DateTime?);
+
     private static bool IsDataType(Type type) => type.Namespace?.Contains(".Data") == true;
     private static bool IsDomainType(Type type) => type.Namespace?.Contains(".Domain") == true;
+}
+
+public static class TimeZoneAwareAssertionExtensions
+{
+    /// <summary>
+    /// Asserts equivalence while excluding DateTime properties that undergo
+    /// timezone conversion (i.e. all DateTime properties except those in
+    /// <see cref="TimeZoneAwareProfile.DefaultPassthroughProperties"/>).
+    /// </summary>
+    public static void ShouldBeEquivalentExcludingConvertedDates<T>(this T actual, T expected)
+    {
+        var convertedDateProperties = typeof(T)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => TimeZoneAwareProfile.IsDateTimeProperty(p)
+                        && !TimeZoneAwareProfile.DefaultPassthroughProperties.Contains(p.Name))
+            .Select(p => p.Name)
+            .ToHashSet();
+
+        actual.Should().BeEquivalentTo(expected, options => options
+            .Excluding(ctx => convertedDateProperties.Contains(ctx.Name)));
+    }
 }
