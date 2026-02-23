@@ -24,7 +24,7 @@ namespace AutoMapperTest.Core.Mapping;
 /// </summary>
 public abstract class TimeZoneAwareProfile : Profile
 {
-    private static readonly TimeZoneInfo CentralTimeZone =
+    internal static readonly TimeZoneInfo CentralTimeZone =
         TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
 
     /// <summary>
@@ -119,5 +119,62 @@ public static class TimeZoneAwareAssertionExtensions
 
         actual.Should().BeEquivalentTo(expected, options => options
             .Excluding(ctx => convertedDateProperties.Contains(ctx.Name)));
+    }
+
+    /// <summary>
+    /// Asserts that all converted DateTime properties on <paramref name="actual"/> are the
+    /// correct Central Time equivalents of the UTC values on <paramref name="source"/>.
+    /// Passthrough properties are ignored.
+    /// </summary>
+    public static void ShouldHaveConvertedCorrectDatesToCentral<TActual, TSource>(this TActual actual, TSource source)
+    {
+        AssertConvertedDates(actual, source, utcToCentral: true);
+    }
+
+    /// <summary>
+    /// Asserts that all converted DateTime properties on <paramref name="actual"/> are the
+    /// correct UTC equivalents of the Central Time values on <paramref name="source"/>.
+    /// Passthrough properties are ignored.
+    /// </summary>
+    public static void ShouldHaveConvertedCorrectDatesToUtc<TActual, TSource>(this TActual actual, TSource source)
+    {
+        AssertConvertedDates(actual, source, utcToCentral: false);
+    }
+
+    private static void AssertConvertedDates<TActual, TSource>(TActual actual, TSource source, bool utcToCentral)
+    {
+        var tz = TimeZoneAwareProfile.CentralTimeZone;
+
+        var actualProps = typeof(TActual)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Where(p => TimeZoneAwareProfile.IsDateTimeProperty(p)
+                        && !TimeZoneAwareProfile.DefaultPassthroughProperties.Contains(p.Name))
+            .ToList();
+
+        var sourcePropsLookup = typeof(TSource)
+            .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .ToDictionary(p => p.Name);
+
+        foreach (var actualProp in actualProps)
+        {
+            if (!sourcePropsLookup.TryGetValue(actualProp.Name, out var sourceProp))
+                continue;
+
+            var sourceRaw = sourceProp.GetValue(source);
+            if (sourceRaw is not DateTime sourceValue)
+                continue;
+
+            var actualRaw = actualProp.GetValue(actual);
+            actualRaw.Should().NotBeNull($"property {actualProp.Name} should have a value");
+
+            var expected = utcToCentral
+                ? TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.SpecifyKind(sourceValue, DateTimeKind.Utc), tz)
+                : TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(sourceValue, DateTimeKind.Unspecified), tz);
+
+            ((DateTime)actualRaw!).Should().Be(expected,
+                $"property {actualProp.Name} should be correctly converted");
+        }
     }
 }
