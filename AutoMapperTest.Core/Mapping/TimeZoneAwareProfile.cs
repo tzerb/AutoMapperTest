@@ -104,11 +104,14 @@ public static class TimeZoneAwareAssertionExtensions
     /// Asserts equivalence while excluding DateTime properties that undergo
     /// timezone conversion (i.e. all DateTime properties except those in
     /// <see cref="TimeZoneAwareProfile.DefaultPassthroughProperties"/>).
+    /// The actual and expected objects can be different types as long as they
+    /// share the same property names.
     /// </summary>
-    public static void ShouldBeEquivalentExcludingConvertedDates<T>(this T actual, T expected)
+    public static void ShouldBeEquivalentExcludingConvertedDates<TActual, TExpected>(this TActual actual, TExpected expected)
     {
-        var convertedDateProperties = typeof(T)
+        var convertedDateProperties = typeof(TActual)
             .GetProperties(BindingFlags.Public | BindingFlags.Instance)
+            .Concat(typeof(TExpected).GetProperties(BindingFlags.Public | BindingFlags.Instance))
             .Where(p => TimeZoneAwareProfile.IsDateTimeProperty(p)
                         && !TimeZoneAwareProfile.DefaultPassthroughProperties.Contains(p.Name))
             .Select(p => p.Name)
