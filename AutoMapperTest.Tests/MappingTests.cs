@@ -2,6 +2,7 @@ using AutoMapper;
 using AutoMapperTest.Core.Data;
 using AutoMapperTest.Core.Domain;
 using AutoMapperTest.Core.Mapping;
+using AutoMapperTest.Core.Services;
 
 namespace AutoMapperTest.Tests;
 
@@ -14,9 +15,15 @@ public class MappingTests
 
     public MappingTests()
     {
+        var myService = new MyService();
         var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
         config.AssertConfigurationIsValid();
-        _mapper = config.CreateMapper();
+        _mapper = new Mapper(config, type =>
+        {
+            if (type == typeof(FullNameResolver))
+                return new FullNameResolver(myService);
+            return null!;
+        });
     }
 
     [Fact]
@@ -356,6 +363,22 @@ public class MappingTests
         Assert.Equal(123, person.Id);
         Assert.Equal("Alice", person.FirstName);
         Assert.Equal("Johnson", person.LastName);
+    }
+
+    // ── DI-based mapping via IValueResolver ──────────────────────────────
+
+    [Fact]
+    public void PersonDto_To_Person_Resolves_FullName_Via_MyService()
+    {
+        var dto = new PersonDto
+        {
+            FirstName = "Alice",
+            LastName = "Johnson"
+        };
+
+        var person = _mapper.Map<Person>(dto);
+
+        Assert.Equal("Johnson, Alice", person.FullName);
     }
 
     [Fact]

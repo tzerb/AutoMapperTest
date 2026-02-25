@@ -8,7 +8,8 @@ public class MappingProfile : TimeZoneAwareProfile
     public MappingProfile()
     {
         // Data (Central) -> Domain (UTC)
-        CreateMap<PersonDto, Person>();
+        CreateMap<PersonDto, Person>()
+            .ForMember(d => d.FullName, opt => opt.MapFrom<FullNameResolver>());
         CreateMap<AppointmentDto, Appointment>();
 
         // Domain (UTC) -> Data (Central)

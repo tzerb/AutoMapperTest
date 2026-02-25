@@ -8,4 +8,5 @@ public class Person
     public DateTime DateOfBirth { get; set; }
     public DateTime CreatedDate { get; set; }
     public DateTime LastModifiedDate { get; set; }
+    public string FullName { get; set; } = string.Empty;
 }
