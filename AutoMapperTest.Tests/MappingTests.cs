@@ -3,6 +3,7 @@ using AutoMapperTest.Core.Data;
 using AutoMapperTest.Core.Domain;
 using AutoMapperTest.Core.Mapping;
 using AutoMapperTest.Core.Services;
+using Moq;
 
 namespace AutoMapperTest.Tests;
 
@@ -15,13 +16,19 @@ public class MappingTests
 
     public MappingTests()
     {
-        var myService = new MyService();
+        var mockCtx = new Mock<ICtx>();
+        mockCtx.Setup(c => c.GetTimeZone(It.IsAny<int>())).Returns("Central");
+
+        var mockService = new Mock<IMyService>();
+        mockService.Setup(s => s.FormatFullName(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns((string first, string last) => $"{last}, {first}");
+
         var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
         config.AssertConfigurationIsValid();
         _mapper = new Mapper(config, type =>
         {
             if (type == typeof(FullNameResolver))
-                return new FullNameResolver(myService);
+                return new FullNameResolver(mockService.Object);
             return null!;
         });
     }
@@ -379,6 +386,32 @@ public class MappingTests
         var person = _mapper.Map<Person>(dto);
 
         Assert.Equal("Johnson, Alice", person.FullName);
+    }
+
+    [Fact]
+    public void PersonDto_To_Person_Resolves_FullName_Via_MockedMyService()
+    {
+        var mockCtx = new Mock<ICtx>();
+        mockCtx.Setup(c => c.GetTimeZone(It.IsAny<int>())).Returns("Eastern");
+
+        var mockService = new Mock<IMyService>();
+        mockService.Setup(s => s.FormatFullName("Alice", "Johnson"))
+            .Returns("Dr. Alice Johnson");
+
+        var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
+        var mapper = new Mapper(config, type =>
+        {
+            if (type == typeof(FullNameResolver))
+                return new FullNameResolver(mockService.Object);
+            return null!;
+        });
+
+        var dto = new PersonDto { FirstName = "Alice", LastName = "Johnson" };
+
+        var person = mapper.Map<Person>(dto);
+
+        Assert.Equal("Dr. Alice Johnson", person.FullName);
+        mockService.Verify(s => s.FormatFullName("Alice", "Johnson"), Times.Once);
     }
 
     [Fact]
