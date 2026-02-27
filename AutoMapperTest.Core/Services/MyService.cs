@@ -8,9 +8,9 @@ public class MyService : IMyService
     {
         _ctx = ctx;
     }
-    public string FormatFullName(string firstName, string lastName)
+    public async Task<string> FormatFullName(string firstName, string lastName)
     {
-        var timezone = _ctx.GetTimeZone(0);
+        var timezone = await _ctx.GetTimeZone(0);
         return $"{lastName}, {firstName} : {timezone}";
     }
 }

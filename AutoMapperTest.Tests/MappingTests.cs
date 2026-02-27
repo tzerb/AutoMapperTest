@@ -17,11 +17,11 @@ public class MappingTests
     public MappingTests()
     {
         var mockCtx = new Mock<ICtx>();
-        mockCtx.Setup(c => c.GetTimeZone(It.IsAny<int>())).Returns("Central");
+        mockCtx.Setup(c => c.GetTimeZone(It.IsAny<int>())).ReturnsAsync("Central");
 
         var mockService = new Mock<IMyService>();
         mockService.Setup(s => s.FormatFullName(It.IsAny<string>(), It.IsAny<string>()))
-            .Returns((string first, string last) => $"{last}, {first}");
+            .Returns((string first, string last) => Task.FromResult($"{last}, {first}"));
 
         var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
         config.AssertConfigurationIsValid();
@@ -392,11 +392,11 @@ public class MappingTests
     public void PersonDto_To_Person_Resolves_FullName_Via_MockedMyService()
     {
         var mockCtx = new Mock<ICtx>();
-        mockCtx.Setup(c => c.GetTimeZone(It.IsAny<int>())).Returns("Eastern");
+        mockCtx.Setup(c => c.GetTimeZone(It.IsAny<int>())).ReturnsAsync("Eastern");
 
         var mockService = new Mock<IMyService>();
         mockService.Setup(s => s.FormatFullName("Alice", "Johnson"))
-            .Returns("Dr. Alice Johnson");
+            .ReturnsAsync("Dr. Alice Johnson");
 
         var config = new MapperConfiguration(cfg => cfg.AddProfile<MappingProfile>());
         var mapper = new Mapper(config, type =>

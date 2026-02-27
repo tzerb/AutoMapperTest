@@ -2,5 +2,5 @@ namespace AutoMapperTest.Core.Services;
 
 public interface IMyService
 {
-    string FormatFullName(string firstName, string lastName);
+    Task<string> FormatFullName(string firstName, string lastName);
 }

@@ -16,6 +16,6 @@ public class FullNameResolver : IValueResolver<PersonDto, Person, string>
 
     public string Resolve(PersonDto source, Person destination, string destMember, ResolutionContext context)
     {
-        return _myService.FormatFullName(source.FirstName, source.LastName);
+        return _myService.FormatFullName(source.FirstName, source.LastName).GetAwaiter().GetResult();
     }
 }

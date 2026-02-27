@@ -2,14 +2,14 @@
 {
     public class Ctx : ICtx
     {
-        public string GetTimeZone(int providerId)
+        public async Task<string> GetTimeZone(int providerId)
         {
-
+            await Task.CompletedTask;
             return providerId == 0 ? "Central" : "Eastern";
         }
     }
     public interface ICtx
     {
-        string GetTimeZone(int providerId);
+        Task<string> GetTimeZone(int providerId);
     }
 }
